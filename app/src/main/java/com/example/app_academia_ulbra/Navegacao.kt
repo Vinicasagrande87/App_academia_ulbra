@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -20,6 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,9 +73,33 @@ fun Navegacao() {
                     )
                 }
             }
-        }
+        },
+        contentWindowInsets = if (mostrarBarraDeCima) ScaffoldDefaults.contentWindowInsets else WindowInsets(0)
     ) { innerPadding ->
-        // aqui vai o NavHost depois
+        NavHost (
+            navController = navController,
+            startDestination = "inicial",
+            modifier = Modifier.padding(innerPadding)
+
+
+        ){
+            composable ("inicial"){
+                TelaInicial (aoTerminar = {
+                    navController.navigate("login"){
+                        popUpTo ("inicial"){inclusive = true  }
+                    }
+                })
+            }
+            composable ("login"){
+                TelaLogin( aoEntrar = { nome, tipo ->
+                    nomeLogado = nome
+                    tipoLogado = tipo
+                    navController.navigate("home-aluno"){
+                        popUpTo ("login"){ inclusive = true  }
+                    }})
+            }
+        }
+
     }
 }
 
