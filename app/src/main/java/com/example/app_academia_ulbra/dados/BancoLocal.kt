@@ -1,10 +1,14 @@
 package com.example.app_academia_ulbra.dados
 
+import android.content.Context
+import com.google.gson.Gson
+import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 
-// Substitui a API do site: os dados ficam guardados na memória do app.
-// Tudo que for cadastrado volta ao estado inicial quando o app é fechado.
+// Substitui a API do site: os dados ficam salvos num arquivo dentro do celular
+// (banco_local.json), então o que for cadastrado continua lá ao reabrir o app.
+// Na primeira vez que o app abre, ele começa com os dados de exemplo abaixo.
 
 // acessos liberados no app: e-mail, senha, tipo e o id do cadastro da pessoa
 private class Acesso(val email: String, val senha: String, val tipo: String, val id: Int)
@@ -24,76 +28,119 @@ fun mensagemDeErro(e: Throwable, padrao: String): String = (e as? ErroApi)?.mens
 
 object BancoLocal {
 
-    private val hoje = LocalDate.now()
-
-    private val alunos = mutableListOf(
-        Aluno(1, "Ana Souza", 24, "62.5", "1.65", "123.456.789-00", "(51) 99999-1111", "ana@ulbra.br", "Hipertrofia"),
-        Aluno(2, "Bruno Lima", 31, "84.0", "1.80", "987.654.321-00", "(51) 99999-2222", "bruno@email.com", "Emagrecimento"),
-        Aluno(3, "Carla Mendes", 19, "55.0", "1.60", "111.222.333-44", "(51) 99999-3333", "carla@email.com", "Condicionamento")
-    )
-
-    private val professores = mutableListOf(
-        Professor(1, "Marcos Pereira", "marcos@ulbra.br", "123456-G/RS", "Musculação"),
-        Professor(2, "Juliana Costa", "juliana@ulbra.br", "654321-G/RS", "Funcional")
-    )
-
-    private val planos = mutableListOf(
-        Plano(1, "Mensal", "Acesso livre à musculação", "99.90", 30),
-        Plano(2, "Trimestral", "3 meses com desconto", "269.90", 90),
-        Plano(3, "Anual", "12 meses pelo melhor preço", "899.90", 365)
-    )
-
-    private val exercicios = mutableListOf(
-        Exercicio(1, "Supino Reto", "Peito", equipamento = "Barra"),
-        Exercicio(2, "Crucifixo", "Peito", equipamento = "Halteres"),
-        Exercicio(3, "Puxada Frontal", "Costas", equipamento = "Máquina"),
-        Exercicio(4, "Remada Curvada", "Costas", equipamento = "Barra"),
-        Exercicio(5, "Desenvolvimento", "Ombro", equipamento = "Halteres"),
-        Exercicio(6, "Elevação Lateral", "Ombro", equipamento = "Halteres"),
-        Exercicio(7, "Rosca Direta", "Braço", equipamento = "Barra"),
-        Exercicio(8, "Tríceps Corda", "Braço", equipamento = "Polia"),
-        Exercicio(9, "Abdominal Supra", "Abdômen"),
-        Exercicio(10, "Prancha", "Abdômen"),
-        Exercicio(11, "Elevação Pélvica", "Glúteo", equipamento = "Barra"),
-        Exercicio(12, "Agachamento Livre", "Pernas", equipamento = "Barra"),
-        Exercicio(13, "Leg Press", "Pernas", equipamento = "Máquina")
-    )
-
     // treinos guardados com o id do aluno junto
     private class TreinoSalvo(val id: Int, val alunoId: Int, var diaSemana: String, var itens: List<ItemTreinoRequest>)
 
-    private val treinos = mutableListOf(
-        TreinoSalvo(
-            1, 1, "Segunda-feira", listOf(
-                ItemTreinoRequest(1, 30, "3x12", 1),
-                ItemTreinoRequest(2, 10, "3x12", 2),
-                ItemTreinoRequest(8, 15, "3x15", 3)
-            )
-        ),
-        TreinoSalvo(
-            2, 1, "Quarta-feira", listOf(
-                ItemTreinoRequest(12, 40, "4x10", 1),
-                ItemTreinoRequest(13, 120, "4x12", 2),
-                ItemTreinoRequest(11, 50, "3x12", 3)
-            )
-        )
+    // tudo que o app guarda; é esse objeto que vira o arquivo JSON
+    private class Dados(
+        val alunos: MutableList<Aluno>,
+        val professores: MutableList<Professor>,
+        val planos: MutableList<Plano>,
+        val exercicios: MutableList<Exercicio>,
+        val treinos: MutableList<TreinoSalvo>,
+        val pagamentos: MutableList<Pagamento>,
+        val anamneses: MutableMap<Int, Anamnese>
     )
 
-    private val pagamentos = mutableListOf(
-        Pagamento(
-            1, 1, null, 1, null, "99.90", "pix",
-            Instant.now().minusSeconds(10L * 24 * 3600).toString(),
-            hoje.plusDays(20).toString(), "confirmado", "Vinicius", null
-        ),
-        Pagamento(2, 2, null, 2, null, "269.90", "cartao_credito", null, null, "pendente", null, null),
-        Pagamento(
-            3, 3, null, 1, null, "99.90", "dinheiro",
-            Instant.now().minusSeconds(40L * 24 * 3600).toString(),
-            hoje.minusDays(10).toString(), "confirmado", "Vinicius", null
-        )
-    )
+    private val gson = Gson()
+    private var arquivo: File? = null
 
-    private val anamneses = mutableMapOf<Int, Anamnese>()
+    private fun dadosDeExemplo(): Dados {
+        val hoje = LocalDate.now()
+        return Dados(
+            alunos = mutableListOf(
+                Aluno(1, "Ana Souza", 24, "62.5", "1.65", "123.456.789-00", "(51) 99999-1111", "ana@ulbra.br", "Hipertrofia"),
+                Aluno(2, "Bruno Lima", 31, "84.0", "1.80", "987.654.321-00", "(51) 99999-2222", "bruno@email.com", "Emagrecimento"),
+                Aluno(3, "Carla Mendes", 19, "55.0", "1.60", "111.222.333-44", "(51) 99999-3333", "carla@email.com", "Condicionamento")
+            ),
+            professores = mutableListOf(
+                Professor(1, "Marcos Pereira", "marcos@ulbra.br", "123456-G/RS", "Musculação"),
+                Professor(2, "Juliana Costa", "juliana@ulbra.br", "654321-G/RS", "Funcional")
+            ),
+            planos = mutableListOf(
+                Plano(1, "Mensal", "Acesso livre à musculação", "99.90", 30),
+                Plano(2, "Trimestral", "3 meses com desconto", "269.90", 90),
+                Plano(3, "Anual", "12 meses pelo melhor preço", "899.90", 365)
+            ),
+            exercicios = mutableListOf(
+                Exercicio(1, "Supino Reto", "Peito", equipamento = "Barra"),
+                Exercicio(2, "Crucifixo", "Peito", equipamento = "Halteres"),
+                Exercicio(3, "Puxada Frontal", "Costas", equipamento = "Máquina"),
+                Exercicio(4, "Remada Curvada", "Costas", equipamento = "Barra"),
+                Exercicio(5, "Desenvolvimento", "Ombro", equipamento = "Halteres"),
+                Exercicio(6, "Elevação Lateral", "Ombro", equipamento = "Halteres"),
+                Exercicio(7, "Rosca Direta", "Braço", equipamento = "Barra"),
+                Exercicio(8, "Tríceps Corda", "Braço", equipamento = "Polia"),
+                Exercicio(9, "Abdominal Supra", "Abdômen"),
+                Exercicio(10, "Prancha", "Abdômen"),
+                Exercicio(11, "Elevação Pélvica", "Glúteo", equipamento = "Barra"),
+                Exercicio(12, "Agachamento Livre", "Pernas", equipamento = "Barra"),
+                Exercicio(13, "Leg Press", "Pernas", equipamento = "Máquina")
+            ),
+            treinos = mutableListOf(
+                TreinoSalvo(
+                    1, 1, "Segunda-feira", listOf(
+                        ItemTreinoRequest(1, 30, "3x12", 1),
+                        ItemTreinoRequest(2, 10, "3x12", 2),
+                        ItemTreinoRequest(8, 15, "3x15", 3)
+                    )
+                ),
+                TreinoSalvo(
+                    2, 1, "Quarta-feira", listOf(
+                        ItemTreinoRequest(12, 40, "4x10", 1),
+                        ItemTreinoRequest(13, 120, "4x12", 2),
+                        ItemTreinoRequest(11, 50, "3x12", 3)
+                    )
+                )
+            ),
+            pagamentos = mutableListOf(
+                Pagamento(
+                    1, 1, null, 1, null, "99.90", "pix",
+                    Instant.now().minusSeconds(10L * 24 * 3600).toString(),
+                    hoje.plusDays(20).toString(), "confirmado", "Vinicius", null
+                ),
+                Pagamento(2, 2, null, 2, null, "269.90", "cartao_credito", null, null, "pendente", null, null),
+                Pagamento(
+                    3, 3, null, 1, null, "99.90", "dinheiro",
+                    Instant.now().minusSeconds(40L * 24 * 3600).toString(),
+                    hoje.minusDays(10).toString(), "confirmado", "Vinicius", null
+                )
+            ),
+            anamneses = mutableMapOf()
+        )
+    }
+
+    private var dados = dadosDeExemplo()
+
+    private val alunos get() = dados.alunos
+    private val professores get() = dados.professores
+    private val planos get() = dados.planos
+    private val exercicios get() = dados.exercicios
+    private val treinos get() = dados.treinos
+    private val pagamentos get() = dados.pagamentos
+    private val anamneses get() = dados.anamneses
+
+    // chamado uma vez quando o app abre (MainActivity)
+    fun iniciar(context: Context) {
+        val arq = File(context.filesDir, "banco_local.json")
+        arquivo = arq
+        if (arq.exists()) {
+            try {
+                dados = gson.fromJson(arq.readText(), Dados::class.java)
+            } catch (e: Exception) {
+                // arquivo estragado: começa de novo com os dados de exemplo
+                dados = dadosDeExemplo()
+                salvar()
+            }
+        } else {
+            salvar()
+        }
+    }
+
+    // grava tudo no arquivo; chamado depois de cada cadastro, edição ou exclusão
+    private fun salvar() {
+        arquivo?.writeText(gson.toJson(dados))
+    }
 
     // gera o próximo id de uma lista, como o "increments" do banco
     private fun <T> proximoId(lista: List<T>, id: (T) -> Int) = (lista.maxOfOrNull(id) ?: 0) + 1
@@ -140,6 +187,7 @@ object BancoLocal {
             aluno.cpf, aluno.telefone, aluno.email, aluno.finalidade
         )
         alunos.add(novo)
+        salvar()
         return novo
     }
 
@@ -153,6 +201,7 @@ object BancoLocal {
             nome = perfil.nome, peso = perfil.peso?.toString(), altura = perfil.altura?.toString(),
             cpf = perfil.cpf, telefone = perfil.telefone, email = perfil.email, finalidade = perfil.finalidade
         )
+        salvar()
     }
 
     suspend fun meusTreinos(): List<Treino> {
@@ -172,6 +221,7 @@ object BancoLocal {
     suspend fun cadastrarProfessor(professor: NovoProfessor): Professor {
         val novo = Professor(proximoId(professores) { it.id }, professor.nome, professor.email, professor.cref, professor.especialidade)
         professores.add(novo)
+        salvar()
         return novo
     }
 
@@ -179,10 +229,12 @@ object BancoLocal {
         val i = professores.indexOfFirst { it.id == id }
         if (i < 0) throw ErroApi("Professor não encontrado.")
         professores[i] = Professor(id, dados.nome, dados.email, dados.cref, dados.especialidade)
+        salvar()
     }
 
     suspend fun excluirProfessor(id: Int) {
         professores.removeAll { it.id == id }
+        salvar()
     }
 
     // ---------- exercícios ----------
@@ -195,6 +247,7 @@ object BancoLocal {
             exercicio.videoUrl.ifBlank { null }, exercicio.equipamento.ifBlank { null }
         )
         exercicios.add(novo)
+        salvar()
         return novo
     }
 
@@ -205,6 +258,7 @@ object BancoLocal {
             id, exercicio.nome, exercicio.grupoMuscular,
             exercicio.videoUrl.ifBlank { null }, exercicio.equipamento.ifBlank { null }
         )
+        salvar()
     }
 
     // ---------- treinos ----------
@@ -218,16 +272,19 @@ object BancoLocal {
             throw ErroApi("Este aluno não tem um plano ativo. Confirme o pagamento na tela financeira antes de montar o treino.")
         }
         treinos.add(TreinoSalvo(proximoId(treinos) { it.id }, alunoId, treino.diaSemana, treino.exercicios))
+        salvar()
     }
 
     suspend fun editarTreino(id: Int, treino: TreinoRequest) {
         val salvo = treinos.firstOrNull { it.id == id } ?: throw ErroApi("Treino não encontrado.")
         salvo.diaSemana = treino.diaSemana
         salvo.itens = treino.exercicios
+        salvar()
     }
 
     suspend fun excluirTreino(id: Int) {
         treinos.removeAll { it.id == id }
+        salvar()
     }
 
     // ---------- planos ----------
@@ -236,12 +293,14 @@ object BancoLocal {
 
     suspend fun criarPlano(plano: PlanoRequest) {
         planos.add(Plano(proximoId(planos) { it.id }, plano.nome, plano.descricao, plano.valor.toString(), plano.duracaoDias))
+        salvar()
     }
 
     suspend fun editarPlano(id: Int, plano: PlanoRequest) {
         val i = planos.indexOfFirst { it.id == id }
         if (i < 0) throw ErroApi("Plano não encontrado.")
         planos[i] = Plano(id, plano.nome, plano.descricao, plano.valor.toString(), plano.duracaoDias)
+        salvar()
     }
 
     suspend fun excluirPlano(id: Int) {
@@ -250,6 +309,7 @@ object BancoLocal {
             throw ErroApi("Erro ao excluir plano (provavelmente já tem pagamentos vinculados).")
         }
         planos.removeAll { it.id == id }
+        salvar()
     }
 
     // ---------- pagamentos ----------
@@ -291,6 +351,7 @@ object BancoLocal {
                 )
             )
         }
+        salvar()
     }
 
     suspend fun confirmarPagamento(id: Int, dados: ConfirmacaoPagamento) {
@@ -304,6 +365,7 @@ object BancoLocal {
             validoAte = validade(plano?.duracaoDias),
             confirmadoPorNome = Sessao.nome
         )
+        salvar()
     }
 
     // ---------- anamnese ----------
@@ -312,5 +374,6 @@ object BancoLocal {
 
     suspend fun salvarAnamnese(alunoId: Int, anamnese: Anamnese) {
         anamneses[alunoId] = anamnese
+        salvar()
     }
 }
