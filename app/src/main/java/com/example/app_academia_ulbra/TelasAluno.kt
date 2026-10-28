@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +45,7 @@ import com.example.app_academia_ulbra.dados.lerNumero
 import com.example.app_academia_ulbra.dados.mensagemDeErro
 import com.example.app_academia_ulbra.dados.ordenarPorDia
 import com.example.app_academia_ulbra.ui.theme.Espaco
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -84,18 +86,59 @@ fun TelaAlunoTreinos(irPara: (String) -> Unit) {
 
             treinos.isEmpty() -> TextoVazio("Você ainda não tem nenhum treino montado. Fala com seu professor!")
 
-            else -> treinos.forEach { treino ->
-                CardSimples {
-                    Text(treino.diaSemana, style = MaterialTheme.typography.titleLarge)
-                    treino.exercicios.forEach { ex ->
-                        HorizontalDivider()
-                        Text(ex.exercicioNome ?: "", fontWeight = FontWeight.Bold)
-                        TextoSecundario("Carga: ${ex.carga ?: "-"}kg • Repetições: ${ex.repeticoes ?: "-"}")
-                        ExercicioMidia(ex.videoUrl)
+            else -> {
+                CronometroDescanso()
+                treinos.forEach { treino ->
+                    CardSimples {
+                        Text(treino.diaSemana, style = MaterialTheme.typography.titleLarge)
+                        treino.exercicios.forEach { ex ->
+                            HorizontalDivider()
+                            Text(ex.exercicioNome ?: "", fontWeight = FontWeight.Bold)
+                            TextoSecundario("Carga: ${ex.carga ?: "-"}kg • Repetições: ${ex.repeticoes ?: "-"}")
+                            ExercicioMidia(ex.videoUrl)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+// contagem de descanso entre as séries; rememberSaveable mantém o tempo ao girar o celular
+@Composable
+fun CronometroDescanso() {
+    val context = LocalContext.current
+    var segundos by rememberSaveable { mutableIntStateOf(0) }
+    var acabou by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(segundos) {
+        if (segundos > 0) {
+            delay(1000)
+            segundos--
+            if (segundos == 0) {
+                vibrar(context, 500)
+                acabou = true
+            }
+        }
+    }
+
+    CardSimples {
+        if (segundos > 0) {
+            Text("Descansando: ${segundos}s", style = MaterialTheme.typography.titleLarge)
+        }
+        Button(
+            onClick = {
+                acabou = false
+                segundos = 60
+            },
+            enabled = segundos == 0,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Descansar 60s")
+        }
+    }
+    if (acabou) {
+        CardAviso("Descanso acabado!", CorAviso.SUCESSO)
     }
 }
 
