@@ -99,7 +99,9 @@ fun Navegacao() {
                         }
                     },
                     navigationIcon = {
-                        if (rotaAtual !in ROTAS_HOME && rotaAtual != "login" && navController.previousBackStackEntry != null) {
+                        // abas da barra de baixo são telas principais: não mostram a seta de voltar
+                        val ehAba = itensBarra.any { it.rota == rotaAtual }
+                        if (!ehAba && rotaAtual != "login" && navController.previousBackStackEntry != null) {
                             IconButton(onClick = { navController.popBackStack() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                             }

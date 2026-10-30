@@ -148,7 +148,7 @@ data class Treino(
 
 data class ItemTreinoRequest(
     val exercicioId: Int,
-    val carga: Int?,
+    val carga: Double?,
     val repeticoes: String,
     val ordem: Int
 )

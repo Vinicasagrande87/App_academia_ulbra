@@ -135,6 +135,11 @@ fun TelaProfessoresLista(cadastrarNovo: () -> Unit) {
     }
 
     fun salvarEdicao(id: Int) {
+        // mesma regra do cadastro: o diálogo só fecha com nome e e-mail válidos
+        if (nome.isBlank() || !email.contains("@")) {
+            mostrarToast(context, "Preencha o nome e um e-mail válido.")
+            return
+        }
         editando = null
         escopo.launch {
             try {
@@ -254,6 +259,10 @@ fun TelaPlanosGerenciar() {
         val duracaoNumero = duracao.trim().toIntOrNull()
         if (nome.isBlank() || valorNumero == null || duracaoNumero == null) {
             mostrarToast(context, "Preencha nome, valor e duração do plano.")
+            return
+        }
+        if (valorNumero <= 0 || duracaoNumero <= 0) {
+            mostrarToast(context, "O valor e a duração do plano precisam ser maiores que zero.")
             return
         }
         editando = null

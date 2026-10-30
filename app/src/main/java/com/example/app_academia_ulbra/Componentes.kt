@@ -40,6 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -285,11 +288,13 @@ fun <T> Seletor(
             trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
             modifier = Modifier.fillMaxWidth()
         )
-        // camada transparente por cima pra abrir o menu ao tocar no campo
+        // camada transparente por cima pra abrir o menu ao tocar no campo;
+        // a descrição faz o leitor de tela (TalkBack) dizer o campo e o valor escolhido
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clickable(enabled = habilitado) { aberto = true }
+                .clickable(enabled = habilitado, role = Role.DropdownList) { aberto = true }
+                .semantics { contentDescription = "$rotulo: ${textoSelecionado.ifBlank { placeholder }}" }
         )
         DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
             opcoes.forEach { (valor, texto) ->

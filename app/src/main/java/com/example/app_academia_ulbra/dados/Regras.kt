@@ -50,6 +50,11 @@ fun formatarValor(valor: String?): String {
 // aceita "75,5" ou "75.5"
 fun lerNumero(texto: String): Double? = texto.trim().replace(',', '.').toDoubleOrNull()
 
+// 40.0 -> "40" e 12.5 -> "12,5", pra mostrar a carga do treino
+fun formatarCarga(carga: Double?): String? = carga?.let {
+    if (it % 1.0 == 0.0) it.toLong().toString() else it.toString().replace('.', ',')
+}
+
 enum class CorAviso { SUCESSO, ATENCAO, PERIGO, NEUTRO }
 
 class SituacaoPlano(val mensagem: String, val cor: CorAviso)

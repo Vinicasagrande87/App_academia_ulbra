@@ -3,6 +3,8 @@ package com.example.app_academia_ulbra.dados
 import android.content.Context
 import com.google.gson.Gson
 import java.io.File
+import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.LocalDate
 
@@ -10,13 +12,28 @@ import java.time.LocalDate
 // (banco_local.json), então o que for cadastrado continua lá ao reabrir o app.
 // Na primeira vez que o app abre, ele começa com os dados de exemplo abaixo.
 
-// acessos liberados no app: e-mail, senha, tipo e o id do cadastro da pessoa
-private class Acesso(val email: String, val senha: String, val tipo: String, val id: Int)
+// login de cada pessoa: e-mail, senha (guardada só como hash), tipo e o id do cadastro dela.
+// Fica salvo junto com os outros dados, então quem é cadastrado no app já consegue entrar
+private class Acesso(var email: String, val sal: String, val senhaHash: String, val tipo: String, val id: Int)
 
-private val ACESSOS = listOf(
-    Acesso("vinicius@ulbra.br", "123456", "admin", 1),
-    Acesso("ana@ulbra.br", "123456", "aluno", 1),       // aluna Ana Souza
-    Acesso("marcos@ulbra.br", "123456", "professor", 1) // professor Marcos Pereira
+private fun gerarSal(): String = ByteArray(16).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+
+private fun hashSenha(senha: String, sal: String): String =
+    MessageDigest.getInstance("SHA-256").digest((sal + senha).toByteArray()).joinToString("") { "%02x".format(it) }
+
+private fun novoAcesso(email: String, senha: String, tipo: String, id: Int): Acesso {
+    val sal = gerarSal()
+    return Acesso(email, sal, hashSenha(senha, sal), tipo, id)
+}
+
+// logins de quem já vem nos dados de exemplo (todos com a senha 123456)
+private fun acessosDeExemplo() = mutableListOf(
+    novoAcesso("vinicius@ulbra.br", "123456", "admin", 1),
+    novoAcesso("ana@ulbra.br", "123456", "aluno", 1),
+    novoAcesso("bruno@email.com", "123456", "aluno", 2),
+    novoAcesso("carla@email.com", "123456", "aluno", 3),
+    novoAcesso("marcos@ulbra.br", "123456", "professor", 1),
+    novoAcesso("juliana@ulbra.br", "123456", "professor", 2)
 )
 
 // erro com a mesma mensagem que a API devolvia no campo "error"
@@ -39,7 +56,9 @@ object BancoLocal {
         val exercicios: MutableList<Exercicio>,
         val treinos: MutableList<TreinoSalvo>,
         val pagamentos: MutableList<Pagamento>,
-        val anamneses: MutableMap<Int, Anamnese>
+        val anamneses: MutableMap<Int, Anamnese>,
+        // pode vir null de um arquivo salvo antes de existir o login no banco
+        var acessos: MutableList<Acesso>?
     )
 
     private val gson = Gson()
@@ -80,16 +99,16 @@ object BancoLocal {
             treinos = mutableListOf(
                 TreinoSalvo(
                     1, 1, "Segunda-feira", listOf(
-                        ItemTreinoRequest(1, 30, "3x12", 1),
-                        ItemTreinoRequest(2, 10, "3x12", 2),
-                        ItemTreinoRequest(8, 15, "3x15", 3)
+                        ItemTreinoRequest(1, 30.0, "3x12", 1),
+                        ItemTreinoRequest(2, 10.0, "3x12", 2),
+                        ItemTreinoRequest(8, 15.0, "3x15", 3)
                     )
                 ),
                 TreinoSalvo(
                     2, 1, "Quarta-feira", listOf(
-                        ItemTreinoRequest(12, 40, "4x10", 1),
-                        ItemTreinoRequest(13, 120, "4x12", 2),
-                        ItemTreinoRequest(11, 50, "3x12", 3)
+                        ItemTreinoRequest(12, 40.0, "4x10", 1),
+                        ItemTreinoRequest(13, 120.0, "4x12", 2),
+                        ItemTreinoRequest(11, 50.0, "3x12", 3)
                     )
                 )
             ),
@@ -106,7 +125,8 @@ object BancoLocal {
                     hoje.minusDays(10).toString(), "confirmado", "Vinicius", null
                 )
             ),
-            anamneses = mutableMapOf()
+            anamneses = mutableMapOf(),
+            acessos = acessosDeExemplo()
         )
     }
 
@@ -119,6 +139,8 @@ object BancoLocal {
     private val treinos get() = dados.treinos
     private val pagamentos get() = dados.pagamentos
     private val anamneses get() = dados.anamneses
+    private val acessos: MutableList<Acesso>
+        get() = dados.acessos ?: acessosDeExemplo().also { dados.acessos = it }
 
     // chamado uma vez quando o app abre (MainActivity)
     fun iniciar(context: Context) {
@@ -127,6 +149,11 @@ object BancoLocal {
         if (arq.exists()) {
             try {
                 dados = gson.fromJson(arq.readText(), Dados::class.java)
+                // arquivo antigo, de antes do login ficar salvo: cria os logins de exemplo
+                if (dados.acessos == null) {
+                    dados.acessos = acessosDeExemplo()
+                    salvar()
+                }
             } catch (e: Exception) {
                 // arquivo estragado: começa de novo com os dados de exemplo
                 dados = dadosDeExemplo()
@@ -149,6 +176,12 @@ object BancoLocal {
         it.alunoId == alunoId && it.status == "confirmado" && !(lerData(it.validoAte)?.isBefore(LocalDate.now()) ?: true)
     }
 
+    // e-mail já usado por outro login (de qualquer tipo); "dono" é o próprio cadastro que está sendo editado
+    private fun emailEmUso(email: String, dono: Acesso? = null) =
+        acessos.any { it !== dono && it.email.equals(email.trim(), ignoreCase = true) }
+
+    private fun acessoDe(tipo: String, id: Int) = acessos.firstOrNull { it.tipo == tipo && it.id == id }
+
     private fun validade(duracaoDias: Int?): String? = duracaoDias?.let { LocalDate.now().plusDays(it.toLong()).toString() }
 
     private fun montarTreino(t: TreinoSalvo) = Treino(
@@ -156,15 +189,16 @@ object BancoLocal {
         t.diaSemana,
         t.itens.sortedBy { it.ordem }.map { item ->
             val ex = exercicios.firstOrNull { it.id == item.exercicioId }
-            ItemTreino(item.exercicioId, ex?.nome, ex?.videoUrl, item.carga?.toString(), item.repeticoes, item.ordem)
+            ItemTreino(item.exercicioId, ex?.nome, ex?.videoUrl, formatarCarga(item.carga), item.repeticoes, item.ordem)
         }
     )
 
     // ---------- login ----------
 
     suspend fun login(dados: LoginRequest): LoginResposta {
-        val acesso = ACESSOS.firstOrNull { it.email.equals(dados.email, ignoreCase = true) && it.senha == dados.senha }
-            ?: throw ErroApi("Login não cadastrado.")
+        val acesso = acessos.firstOrNull {
+            it.email.equals(dados.email.trim(), ignoreCase = true) && it.senhaHash == hashSenha(dados.senha, it.sal)
+        } ?: throw ErroApi("Login não cadastrado.")
 
         // o nome vem do cadastro, igual a API fazia
         val nome = when (acesso.tipo) {
@@ -180,13 +214,16 @@ object BancoLocal {
     suspend fun listarAlunos(): List<Aluno> = alunos.sortedBy { it.nome }
 
     suspend fun cadastrarAluno(aluno: NovoAluno): Aluno {
-        if (alunos.any { it.email.equals(aluno.email, ignoreCase = true) }) throw ErroApi("Este e-mail já está cadastrado.")
+        if (alunos.any { it.email.equals(aluno.email, ignoreCase = true) } || emailEmUso(aluno.email)) {
+            throw ErroApi("Este e-mail já está cadastrado.")
+        }
         if (alunos.any { it.cpf == aluno.cpf }) throw ErroApi("Este CPF já está cadastrado.")
         val novo = Aluno(
             proximoId(alunos) { it.id }, aluno.nome, aluno.idade, aluno.peso?.toString(), aluno.altura?.toString(),
             aluno.cpf, aluno.telefone, aluno.email, aluno.finalidade
         )
         alunos.add(novo)
+        acessos.add(novoAcesso(novo.email, aluno.senha, "aluno", novo.id))
         salvar()
         return novo
     }
@@ -197,6 +234,9 @@ object BancoLocal {
     suspend fun atualizarPerfil(perfil: PerfilAluno) {
         val i = alunos.indexOfFirst { it.id == Sessao.id }
         if (i < 0) throw ErroApi("Aluno não encontrado.")
+        val acesso = acessoDe("aluno", Sessao.id)
+        if (emailEmUso(perfil.email, acesso)) throw ErroApi("Este e-mail já está cadastrado.")
+        acesso?.email = perfil.email
         alunos[i] = alunos[i].copy(
             nome = perfil.nome, peso = perfil.peso?.toString(), altura = perfil.altura?.toString(),
             cpf = perfil.cpf, telefone = perfil.telefone, email = perfil.email, finalidade = perfil.finalidade
@@ -219,8 +259,10 @@ object BancoLocal {
     suspend fun listarProfessores(): List<Professor> = professores.sortedBy { it.nome }
 
     suspend fun cadastrarProfessor(professor: NovoProfessor): Professor {
+        if (emailEmUso(professor.email)) throw ErroApi("Este e-mail já está cadastrado.")
         val novo = Professor(proximoId(professores) { it.id }, professor.nome, professor.email, professor.cref, professor.especialidade)
         professores.add(novo)
+        acessos.add(novoAcesso(novo.email, professor.senha, "professor", novo.id))
         salvar()
         return novo
     }
@@ -228,12 +270,16 @@ object BancoLocal {
     suspend fun editarProfessor(id: Int, dados: EdicaoProfessor) {
         val i = professores.indexOfFirst { it.id == id }
         if (i < 0) throw ErroApi("Professor não encontrado.")
+        val acesso = acessoDe("professor", id)
+        if (emailEmUso(dados.email, acesso)) throw ErroApi("Este e-mail já está cadastrado.")
+        acesso?.email = dados.email
         professores[i] = Professor(id, dados.nome, dados.email, dados.cref, dados.especialidade)
         salvar()
     }
 
     suspend fun excluirProfessor(id: Int) {
         professores.removeAll { it.id == id }
+        acessos.removeAll { it.tipo == "professor" && it.id == id }
         salvar()
     }
 
@@ -270,6 +316,10 @@ object BancoLocal {
         val alunoId = treino.alunoId ?: throw ErroApi("Informe o aluno.")
         if (!temPlanoAtivo(alunoId)) {
             throw ErroApi("Este aluno não tem um plano ativo. Confirme o pagamento na tela financeira antes de montar o treino.")
+        }
+        // um treino por dia: a tela de edição abre o treino pelo dia da semana
+        if (treinos.any { it.alunoId == alunoId && it.diaSemana == treino.diaSemana }) {
+            throw ErroApi("Esse aluno já tem um treino de ${treino.diaSemana}. Use \"Editar Dia\" na ficha para alterar.")
         }
         treinos.add(TreinoSalvo(proximoId(treinos) { it.id }, alunoId, treino.diaSemana, treino.exercicios))
         salvar()

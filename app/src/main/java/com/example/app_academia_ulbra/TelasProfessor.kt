@@ -436,11 +436,11 @@ class ItemFormulario(grupo: String = "", exercicioId: Int? = null, carga: String
     var repeticoes by mutableStateOf(repeticoes)
 }
 
-// a carga vai pra API só com os dígitos, igual o site faz ("40kg" -> 40)
+// a carga aceita decimal ("12,5" -> 12.5) e ignora o "kg" digitado junto ("40kg" -> 40)
 private fun montarItens(itens: List<ItemFormulario>) = itens.mapIndexed { i, item ->
     ItemTreinoRequest(
         exercicioId = item.exercicioId ?: 0,
-        carga = item.carga.filter(Char::isDigit).toIntOrNull(),
+        carga = lerNumero(item.carga.filter { it.isDigit() || it == ',' || it == '.' }),
         repeticoes = item.repeticoes.trim(),
         ordem = i + 1
     )
