@@ -146,6 +146,7 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
         if (!formularioValido || salvando) return
         salvando = true
         escopo.launch {
+            val endereco = (estadoCep as? EstadoCep.Pronto)?.endereco
             try {
                 Servidor.cadastrarAluno(
                     NovoAluno(
@@ -158,7 +159,11 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
                         email = email.trim(),
                         senha = senha,
                         finalidade = finalidade.trim(),
-                        endereco = (estadoCep as? EstadoCep.Pronto)?.endereco
+                        cep = endereco?.cep,
+                        logradouro = endereco?.logradouro,
+                        bairro = endereco?.bairro,
+                        localidade = endereco?.localidade,
+                        uf = endereco?.uf
                     )
                 )
                 mostrarToast(context, "Aluno cadastrado com sucesso!")

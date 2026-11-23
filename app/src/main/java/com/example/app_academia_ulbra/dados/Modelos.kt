@@ -24,8 +24,15 @@ data class Aluno(
     val telefone: String? = null,
     val email: String = "",
     val finalidade: String? = null,
-    val endereco: Endereco? = null
-)
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val bairro: String? = null,
+    val localidade: String? = null,
+    val uf: String? = null
+) {
+    // a API manda o endereço em colunas soltas; a tela usa tudo junto
+    val endereco: Endereco? get() = cep?.let { Endereco(it, logradouro, bairro, localidade, uf) }
+}
 
 data class NovoAluno(
     val nome: String,
@@ -37,7 +44,11 @@ data class NovoAluno(
     val email: String,
     val senha: String,
     val finalidade: String,
-    val endereco: Endereco? = null
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val bairro: String? = null,
+    val localidade: String? = null,
+    val uf: String? = null
 )
 
 data class PerfilAluno(

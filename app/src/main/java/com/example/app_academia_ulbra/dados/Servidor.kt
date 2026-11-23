@@ -27,7 +27,8 @@ fun lerErro(e: Throwable): ErroApi = e as? ErroApi ?: ErroApi(e.message ?: "Erro
 
 fun mensagemDeErro(e: Throwable, padrao: String): String = (e as? ErroApi)?.mensagem ?: padrao
 
-private class RespostaErro(val error: String?, val codigo: String?)
+// "detalhes" vem quando a validação dos campos recusa o envio
+private class RespostaErro(val error: String?, val codigo: String?, val detalhes: List<String>?)
 
 interface ServidorApi {
     @POST("login") suspend fun login(@Body dados: LoginRequest): LoginResposta
@@ -106,7 +107,11 @@ object Servidor {
         } catch (e: Exception) {
             null
         }
-        val mensagem = if (resposta.code() == 401) "Sua sessão expirou. Saia e entre de novo." else corpo?.error
+        val mensagem = when {
+            resposta.code() == 401 -> "Sua sessão expirou. Saia e entre de novo."
+            !corpo?.detalhes.isNullOrEmpty() -> corpo!!.detalhes!!.joinToString("\n")
+            else -> corpo?.error
+        }
         return ErroApi(mensagem ?: "Erro no servidor (${resposta.code()}).", corpo?.codigo, resposta.code())
     }
 
