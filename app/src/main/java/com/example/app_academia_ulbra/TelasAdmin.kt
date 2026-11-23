@@ -26,7 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.app_academia_ulbra.dados.BancoLocal
+import com.example.app_academia_ulbra.dados.Servidor
 import com.example.app_academia_ulbra.dados.EdicaoProfessor
 import com.example.app_academia_ulbra.dados.Exercicio
 import com.example.app_academia_ulbra.dados.ExercicioRequest
@@ -77,7 +77,7 @@ fun TelaProfessorCadastro(aoSalvar: () -> Unit) {
         salvando = true
         escopo.launch {
             try {
-                BancoLocal.cadastrarProfessor(NovoProfessor(nome.trim(), email.trim(), senha, cref.trim(), especialidade.trim()))
+                Servidor.cadastrarProfessor(NovoProfessor(nome.trim(), email.trim(), senha, cref.trim(), especialidade.trim()))
                 mostrarToast(context, "Professor cadastrado com sucesso!")
                 aoSalvar()
             } catch (e: Exception) {
@@ -128,7 +128,7 @@ fun TelaProfessoresLista(cadastrarNovo: () -> Unit) {
 
     LaunchedEffect(recarregar) {
         try {
-            professores = BancoLocal.listarProfessores()
+            professores = Servidor.listarProfessores()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar professores."))
         }
@@ -143,7 +143,7 @@ fun TelaProfessoresLista(cadastrarNovo: () -> Unit) {
         editando = null
         escopo.launch {
             try {
-                BancoLocal.editarProfessor(id, EdicaoProfessor(nome.trim(), email.trim(), cref.trim(), especialidade.trim()))
+                Servidor.editarProfessor(id, EdicaoProfessor(nome.trim(), email.trim(), cref.trim(), especialidade.trim()))
                 mostrarToast(context, "Professor atualizado com sucesso!")
                 recarregar++
             } catch (e: Exception) {
@@ -156,7 +156,7 @@ fun TelaProfessoresLista(cadastrarNovo: () -> Unit) {
         excluindo = null
         escopo.launch {
             try {
-                BancoLocal.excluirProfessor(professor.id)
+                Servidor.excluirProfessor(professor.id)
                 professores = professores.filter { it.id != professor.id }
                 mostrarToast(context, "Professor excluído com sucesso!")
             } catch (e: Exception) {
@@ -240,7 +240,7 @@ fun TelaPlanosGerenciar() {
 
     LaunchedEffect(recarregar) {
         try {
-            planos = BancoLocal.listarPlanos()
+            planos = Servidor.listarPlanos()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar planos."))
         }
@@ -271,9 +271,9 @@ fun TelaPlanosGerenciar() {
         escopo.launch {
             try {
                 if (criando) {
-                    BancoLocal.criarPlano(dados)
+                    Servidor.criarPlano(dados)
                 } else {
-                    BancoLocal.editarPlano(plano.id, dados)
+                    Servidor.editarPlano(plano.id, dados)
                 }
                 mostrarToast(context, if (criando) "Plano criado com sucesso!" else "Plano atualizado com sucesso!")
                 recarregar++
@@ -287,7 +287,7 @@ fun TelaPlanosGerenciar() {
         excluindo = null
         escopo.launch {
             try {
-                BancoLocal.excluirPlano(plano.id)
+                Servidor.excluirPlano(plano.id)
                 planos = planos.filter { it.id != plano.id }
                 mostrarToast(context, "Plano excluído com sucesso!")
             } catch (e: Exception) {
@@ -351,7 +351,7 @@ fun TelaExerciciosLista(editar: (Exercicio) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            exercicios = BancoLocal.listarExercicios().sortedWith(compareBy({ it.grupoMuscular }, { it.nome }))
+            exercicios = Servidor.listarExercicios().sortedWith(compareBy({ it.grupoMuscular }, { it.nome }))
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar exercícios."))
         }
@@ -436,7 +436,7 @@ fun TelaExercicioCadastro(
 
     LaunchedEffect(Unit) {
         try {
-            todosExercicios = BancoLocal.listarExercicios()
+            todosExercicios = Servidor.listarExercicios()
             // veio da lista de exercícios pelo botão "Editar"
             if (exercicioIdInicial != null && selecionadoNoSeletor == null) {
                 selecionarExercicio(exercicioIdInicial)
@@ -459,9 +459,9 @@ fun TelaExercicioCadastro(
         escopo.launch {
             try {
                 if (id != null) {
-                    BancoLocal.editarExercicio(id, dados)
+                    Servidor.editarExercicio(id, dados)
                 } else {
-                    BancoLocal.cadastrarExercicio(dados)
+                    Servidor.cadastrarExercicio(dados)
                 }
                 mostrarToast(context, "Exercício salvo com sucesso!")
                 aoSalvar()

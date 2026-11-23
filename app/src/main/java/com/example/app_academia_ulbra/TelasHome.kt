@@ -21,7 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import com.example.app_academia_ulbra.dados.BancoLocal
+import com.example.app_academia_ulbra.dados.Servidor
 import com.example.app_academia_ulbra.dados.CorAviso
 import com.example.app_academia_ulbra.dados.Sessao
 import com.example.app_academia_ulbra.dados.SituacaoPlano
@@ -47,7 +47,7 @@ fun TelaHomeAluno(irPara: (String) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            val situacao = calcularSituacaoPlano(BancoLocal.listarPagamentos())
+            val situacao = calcularSituacaoPlano(Servidor.listarPagamentos())
             // só mostra o aviso quando tem algo pra avisar (vencendo, vencido ou sem plano)
             avisoPlano = if (situacao.cor != CorAviso.SUCESSO) situacao else null
         } catch (e: Exception) {

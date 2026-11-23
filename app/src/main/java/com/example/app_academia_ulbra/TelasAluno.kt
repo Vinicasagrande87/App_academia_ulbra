@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import com.example.app_academia_ulbra.dados.BancoLocal
+import com.example.app_academia_ulbra.dados.Servidor
 import com.example.app_academia_ulbra.dados.CorAviso
 import com.example.app_academia_ulbra.dados.FORMAS_PAGAMENTO
 import com.example.app_academia_ulbra.dados.Pagamento
@@ -56,7 +56,7 @@ fun TelaAlunoTreinos(irPara: (String) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            treinos = ordenarPorDia(BancoLocal.meusTreinos())
+            treinos = ordenarPorDia(Servidor.meusTreinos())
         } catch (e: Exception) {
             treinos = emptyList()
             val erro = lerErro(e)
@@ -154,7 +154,7 @@ fun TelaAlunoFinanceiro() {
 
     suspend fun carregarPagamentos() {
         try {
-            pagamentos = BancoLocal.listarPagamentos()
+            pagamentos = Servidor.listarPagamentos()
             situacaoPlano = calcularSituacaoPlano(pagamentos)
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar pagamentos."))
@@ -163,7 +163,7 @@ fun TelaAlunoFinanceiro() {
 
     LaunchedEffect(Unit) {
         try {
-            planos = BancoLocal.listarPlanos()
+            planos = Servidor.listarPlanos()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar planos."))
         }
@@ -173,7 +173,7 @@ fun TelaAlunoFinanceiro() {
     fun enviarSolicitacao(plano: Plano, formaPagamento: String) {
         escopo.launch {
             try {
-                BancoLocal.registrarPagamento(PagamentoRequest(plano.id, formaPagamento))
+                Servidor.registrarPagamento(PagamentoRequest(plano.id, formaPagamento))
                 mostrarToast(context, "Solicitação enviada! Aguarde a confirmação na recepção.")
                 carregarPagamentos()
             } catch (e: Exception) {
@@ -249,7 +249,7 @@ fun TelaAlunoPerfil() {
 
     LaunchedEffect(Unit) {
         try {
-            val aluno = BancoLocal.meuPerfil()
+            val aluno = Servidor.meuPerfil()
             nome = aluno.nome
             peso = aluno.peso ?: ""
             altura = aluno.altura ?: ""
@@ -275,7 +275,7 @@ fun TelaAlunoPerfil() {
                     email = email.trim(),
                     finalidade = finalidade.trim()
                 )
-                BancoLocal.atualizarPerfil(perfil)
+                Servidor.atualizarPerfil(perfil)
                 mostrarToast(context, "Perfil atualizado com sucesso!")
             } catch (e: Exception) {
                 mostrarToast(context, mensagemDeErro(e, "Erro ao atualizar perfil."))

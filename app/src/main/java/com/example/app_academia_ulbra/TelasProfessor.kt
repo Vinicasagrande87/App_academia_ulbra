@@ -42,7 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.app_academia_ulbra.dados.Aluno
 import com.example.app_academia_ulbra.dados.Anamnese
-import com.example.app_academia_ulbra.dados.BancoLocal
+import com.example.app_academia_ulbra.dados.Servidor
 import com.example.app_academia_ulbra.dados.ConfirmacaoPagamento
 import com.example.app_academia_ulbra.dados.CorAviso
 import com.example.app_academia_ulbra.dados.DIAS_DA_SEMANA
@@ -147,7 +147,7 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
         salvando = true
         escopo.launch {
             try {
-                BancoLocal.cadastrarAluno(
+                Servidor.cadastrarAluno(
                     NovoAluno(
                         nome = nome.trim(),
                         idade = idade.toIntOrNull(),
@@ -281,12 +281,12 @@ fun TelaAlunosLista(abrirFicha: (Aluno) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            alunos = BancoLocal.listarAlunos()
+            alunos = Servidor.listarAlunos()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar alunos."))
         }
         try {
-            planos = BancoLocal.listarPlanos()
+            planos = Servidor.listarPlanos()
         } catch (e: Exception) {
             planos = emptyList()
         }
@@ -301,7 +301,7 @@ fun TelaAlunosLista(abrirFicha: (Aluno) -> Unit) {
         cancelarVinculo()
         escopo.launch {
             try {
-                BancoLocal.registrarPagamento(
+                Servidor.registrarPagamento(
                     PagamentoRequest(
                         planoId = plano.id,
                         formaPagamento = forma,
@@ -402,14 +402,14 @@ fun TelaAlunoFicha(
     var endereco by remember { mutableStateOf<Endereco?>(null) }
 
     LaunchedEffect(Unit) {
-        endereco = BancoLocal.listarAlunos().firstOrNull { it.id == alunoId }?.endereco
+        endereco = Servidor.listarAlunos().firstOrNull { it.id == alunoId }?.endereco
         try {
-            treinos = ordenarPorDia(BancoLocal.treinosDoAluno(alunoId))
+            treinos = ordenarPorDia(Servidor.treinosDoAluno(alunoId))
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar treinos do aluno."))
         }
         try {
-            situacaoPlano = calcularSituacaoPlano(BancoLocal.listarPagamentos(alunoId = alunoId), paraProfessor = true)
+            situacaoPlano = calcularSituacaoPlano(Servidor.listarPagamentos(alunoId = alunoId), paraProfessor = true)
         } catch (e: Exception) {
             situacaoPlano = null
         }
@@ -422,7 +422,7 @@ fun TelaAlunoFicha(
         treinoExcluindo = null
         escopo.launch {
             try {
-                BancoLocal.excluirTreino(treino.id)
+                Servidor.excluirTreino(treino.id)
                 treinos = treinos.filter { it.id != treino.id }
                 mostrarToast(context, "Treino excluído com sucesso!")
             } catch (e: Exception) {
@@ -534,7 +534,7 @@ private fun FormularioItensTreino(itens: MutableList<ItemFormulario>, catalogo: 
             )
             if (mostrarMidia) {
                 catalogo.firstOrNull { it.id == item.exercicioId }?.let {
-                    ExercicioMidia(it.videoUrl)
+                    ExercicioMidia(it.midia)
                 }
             }
             CampoTexto(item.carga, { item.carga = it }, "Carga (kg)", "Ex: 40")
@@ -564,7 +564,7 @@ fun TelaTreinoCadastro(alunoId: Int, aoSalvar: () -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            catalogo = BancoLocal.listarExercicios()
+            catalogo = Servidor.listarExercicios()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar exercícios."))
         }
@@ -575,7 +575,7 @@ fun TelaTreinoCadastro(alunoId: Int, aoSalvar: () -> Unit) {
         salvando = true
         escopo.launch {
             try {
-                BancoLocal.criarTreino(TreinoRequest(alunoId, diaSemana, montarItens(itens)))
+                Servidor.criarTreino(TreinoRequest(alunoId, diaSemana, montarItens(itens)))
                 mostrarToast(context, "Treino criado com sucesso!")
                 aoSalvar()
             } catch (e: Exception) {
@@ -623,8 +623,8 @@ fun TelaTreinoEditar(alunoId: Int, dia: String, aoSalvar: () -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            catalogo = BancoLocal.listarExercicios()
-            val treinoDoDia = BancoLocal.treinosDoAluno(alunoId).firstOrNull { it.diaSemana == dia }
+            catalogo = Servidor.listarExercicios()
+            val treinoDoDia = Servidor.treinosDoAluno(alunoId).firstOrNull { it.diaSemana == dia }
             if (treinoDoDia == null) {
                 mostrarToast(context, "Nenhum treino encontrado para esse dia.")
             } else {
@@ -661,7 +661,7 @@ fun TelaTreinoEditar(alunoId: Int, dia: String, aoSalvar: () -> Unit) {
         }
         escopo.launch {
             try {
-                BancoLocal.editarTreino(id, TreinoRequest(null, dia, montarItens(itens)))
+                Servidor.editarTreino(id, TreinoRequest(null, dia, montarItens(itens)))
                 mostrarToast(context, "Treino atualizado com sucesso!")
                 aoSalvar()
             } catch (e: Exception) {
@@ -708,7 +708,7 @@ fun TelaFinanceiro() {
 
     LaunchedEffect(Unit) {
         try {
-            planos = BancoLocal.listarPlanos()
+            planos = Servidor.listarPlanos()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar planos."))
         }
@@ -716,7 +716,7 @@ fun TelaFinanceiro() {
 
     LaunchedEffect(filtroStatus, recarregar) {
         try {
-            pagamentos = BancoLocal.listarPagamentos(status = filtroStatus.ifBlank { null })
+            pagamentos = Servidor.listarPagamentos(status = filtroStatus.ifBlank { null })
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar pagamentos."))
         }
@@ -726,7 +726,7 @@ fun TelaFinanceiro() {
         confirmando = null
         escopo.launch {
             try {
-                BancoLocal.confirmarPagamento(
+                Servidor.confirmarPagamento(
                     pagamento.id,
                     ConfirmacaoPagamento("confirmado", pagamento.valor, pagamento.formaPagamento, observacao)
                 )
@@ -814,7 +814,7 @@ fun TelaAnamneseLista(abrirAnamnese: (Aluno) -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            alunos = BancoLocal.listarAlunos()
+            alunos = Servidor.listarAlunos()
         } catch (e: Exception) {
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar alunos."))
         }
@@ -862,7 +862,7 @@ fun TelaAlunoAnamnese(alunoId: Int, aoSalvar: () -> Unit) {
 
     LaunchedEffect(Unit) {
         try {
-            BancoLocal.buscarAnamnese(alunoId)?.let { a ->
+            Servidor.buscarAnamnese(alunoId)?.let { a ->
                 listOf(
                     a.praticaAtividadeAtualmente, a.praticouAtividadeAnteriormente, a.problemaOsteoarticular,
                     a.problemaNeuromuscular, a.problemaCoronario, a.problemaVascular, a.hospitalizado5Anos,
@@ -880,7 +880,7 @@ fun TelaAlunoAnamnese(alunoId: Int, aoSalvar: () -> Unit) {
         val r = respostas.map { it.trim() }
         escopo.launch {
             try {
-                BancoLocal.salvarAnamnese(
+                Servidor.salvarAnamnese(
                     alunoId,
                     Anamnese(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10])
                 )

@@ -1,7 +1,9 @@
 package com.example.app_academia_ulbra.dados
 
-// Os campos numéricos que o banco do site guardava como "numeric" (valor, peso,
-// altura, carga) ficam como String aqui, igual vinham da API
+import com.google.gson.annotations.SerializedName
+
+// Os campos numéricos que o banco guarda como "numeric" (valor, peso,
+// altura, carga) ficam como String aqui, igual vêm da API
 
 data class LoginRequest(val email: String, val senha: String)
 
@@ -123,8 +125,12 @@ data class Exercicio(
     val nome: String = "",
     val grupoMuscular: String = "",
     val videoUrl: String? = null,
-    val equipamento: String? = null
-)
+    val equipamento: String? = null,
+    val workoutxId: String? = null
+) {
+    // link que aparece na tela: o vídeo cadastrado ou, se não tiver, o gif do WorkoutX
+    val midia: String? get() = videoUrl?.takeIf { it.isNotBlank() } ?: urlGif(workoutxId)
+}
 
 data class ExercicioRequest(
     val nome: String,
@@ -139,7 +145,8 @@ data class ItemTreino(
     val videoUrl: String?,
     val carga: String?,
     val repeticoes: String?,
-    val ordem: Int? = null
+    val ordem: Int? = null,
+    val workoutxId: String? = null
 )
 
 data class Treino(
@@ -168,8 +175,8 @@ data class Anamnese(
     val problemaNeuromuscular: String? = null,
     val problemaCoronario: String? = null,
     val problemaVascular: String? = null,
-    val hospitalizado5Anos: String? = null,
-    val cirurgia5Anos: String? = null,
+    @SerializedName("hospitalizado_5_anos") val hospitalizado5Anos: String? = null,
+    @SerializedName("cirurgia_5_anos") val cirurgia5Anos: String? = null,
     val contatoEmergenciaNome: String? = null,
     val contatoEmergenciaTelefone: String? = null,
     val contatoEmergenciaParentesco: String? = null
