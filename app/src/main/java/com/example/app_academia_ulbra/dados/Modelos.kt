@@ -21,7 +21,8 @@ data class Aluno(
     val cpf: String? = null,
     val telefone: String? = null,
     val email: String = "",
-    val finalidade: String? = null
+    val finalidade: String? = null,
+    val endereco: Endereco? = null
 )
 
 data class NovoAluno(
@@ -33,7 +34,8 @@ data class NovoAluno(
     val telefone: String,
     val email: String,
     val senha: String,
-    val finalidade: String
+    val finalidade: String,
+    val endereco: Endereco? = null
 )
 
 data class PerfilAluno(

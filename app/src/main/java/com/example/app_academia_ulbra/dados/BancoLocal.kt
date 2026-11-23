@@ -220,7 +220,7 @@ object BancoLocal {
         if (alunos.any { it.cpf == aluno.cpf }) throw ErroApi("Este CPF já está cadastrado.")
         val novo = Aluno(
             proximoId(alunos) { it.id }, aluno.nome, aluno.idade, aluno.peso?.toString(), aluno.altura?.toString(),
-            aluno.cpf, aluno.telefone, aluno.email, aluno.finalidade
+            aluno.cpf, aluno.telefone, aluno.email, aluno.finalidade, aluno.endereco
         )
         alunos.add(novo)
         acessos.add(novoAcesso(novo.email, aluno.senha, "aluno", novo.id))

@@ -157,7 +157,8 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
                         telefone = telefone.trim(),
                         email = email.trim(),
                         senha = senha,
-                        finalidade = finalidade.trim()
+                        finalidade = finalidade.trim(),
+                        endereco = (estadoCep as? EstadoCep.Pronto)?.endereco
                     )
                 )
                 mostrarToast(context, "Aluno cadastrado com sucesso!")
@@ -183,7 +184,7 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
-                CampoTexto(cep, { cep = it.filter(Char::isDigit).take(8) }, "CEP", "00000000", KeyboardType.Number)
+                CampoTexto(cep, { cep = it.filter(Char::isDigit).take(8); estadoCep = EstadoCep.Vazio }, "CEP", "00000000", KeyboardType.Number)
             }
             Spacer(Modifier.width(Espaco.pequeno))
             OutlinedButton(
