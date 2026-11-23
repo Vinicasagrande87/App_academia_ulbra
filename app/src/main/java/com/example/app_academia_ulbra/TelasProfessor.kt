@@ -409,7 +409,7 @@ fun TelaAlunoFicha(
             mostrarToast(context, mensagemDeErro(e, "Erro ao carregar treinos do aluno."))
         }
         try {
-            situacaoPlano = calcularSituacaoPlano(BancoLocal.listarPagamentos(alunoId = alunoId))
+            situacaoPlano = calcularSituacaoPlano(BancoLocal.listarPagamentos(alunoId = alunoId), paraProfessor = true)
         } catch (e: Exception) {
             situacaoPlano = null
         }

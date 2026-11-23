@@ -61,14 +61,16 @@ class SituacaoPlano(val mensagem: String, val cor: CorAviso)
 
 // mesma regra do calcularSituacaoPlano() do site: olha o pagamento confirmado
 // com a validade mais distante e diz se o plano está ativo, vencendo ou vencido
-fun calcularSituacaoPlano(pagamentos: List<Pagamento>): SituacaoPlano {
+// paraProfessor = true troca o "você" pelo "aluno" (ficha vista pelo professor)
+fun calcularSituacaoPlano(pagamentos: List<Pagamento>, paraProfessor: Boolean = false): SituacaoPlano {
     val planoAtual = pagamentos
         .filter { it.status == "confirmado" && lerData(it.validoAte) != null }
         .maxByOrNull { lerData(it.validoAte)!! }
 
     if (planoAtual == null) {
         return SituacaoPlano(
-            "Você ainda não tem um plano ativo. Escolha um plano abaixo pra começar!",
+            if (paraProfessor) "Este aluno ainda não tem um plano ativo."
+            else "Você ainda não tem um plano ativo. Escolha um plano abaixo pra começar!",
             CorAviso.NEUTRO
         )
     }
@@ -76,16 +78,20 @@ fun calcularSituacaoPlano(pagamentos: List<Pagamento>): SituacaoPlano {
     val validoAte = lerData(planoAtual.validoAte)!!
     val diasRestantes = ChronoUnit.DAYS.between(LocalDate.now(), validoAte)
     val dataFormatada = validoAte.format(FORMATO_DATA)
+    val plano = if (paraProfessor) "O plano do aluno" else "Seu plano"
+    val dias = "$diasRestantes dia${if (diasRestantes == 1L) "" else "s"}"
 
     return when {
         diasRestantes < 0 -> SituacaoPlano(
-            "Seu plano venceu em $dataFormatada. Renove abaixo pra continuar treinando!",
+            if (paraProfessor) "$plano venceu em $dataFormatada."
+            else "$plano venceu em $dataFormatada. Renove abaixo pra continuar treinando!",
             CorAviso.PERIGO
         )
         diasRestantes <= 7 -> SituacaoPlano(
-            "Seu plano vence em $diasRestantes dia${if (diasRestantes == 1L) "" else "s"} ($dataFormatada). Que tal já renovar?",
+            if (paraProfessor) "$plano vence em $dias ($dataFormatada)."
+            else "$plano vence em $dias ($dataFormatada). Que tal já renovar?",
             CorAviso.ATENCAO
         )
-        else -> SituacaoPlano("Seu plano está ativo até $dataFormatada.", CorAviso.SUCESSO)
+        else -> SituacaoPlano("$plano está ativo até $dataFormatada.", CorAviso.SUCESSO)
     }
 }
