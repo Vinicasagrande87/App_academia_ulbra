@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A partir do Android 12 a tela de entrada do sistema sempre aparece.
+         Sem ícone e com o verde do app, ela emenda direto na TelaInicial -->
+    <style name="Theme.App_academia_ulbra" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@color/verde_ulbra</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+    </style>
+</resources>
