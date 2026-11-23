@@ -197,10 +197,7 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
         when (val estado = estadoCep) {
             EstadoCep.Vazio -> {}
             EstadoCep.Carregando -> Carregando()
-            is EstadoCep.Pronto -> with(estado.endereco) {
-                Text("$logradouro, $bairro", fontWeight = FontWeight.Bold)
-                TextoSecundario("$localidade - $uf, $cep")
-            }
+            is EstadoCep.Pronto -> TextoEndereco(estado.endereco)
             is EstadoCep.Erro -> Text(estado.mensagem, color = VermelhoPerigo)
         }
 
@@ -385,6 +382,12 @@ fun TelaAlunosLista(abrirFicha: (Aluno) -> Unit) {
 // ---------- Ficha do aluno (treinos montados) ----------
 
 @Composable
+fun TextoEndereco(endereco: Endereco) = with(endereco) {
+    Text("$logradouro, $bairro", fontWeight = FontWeight.Bold)
+    TextoSecundario("$localidade - $uf, $cep")
+}
+
+@Composable
 fun TelaAlunoFicha(
     alunoId: Int,
     montarTreino: () -> Unit,
@@ -396,8 +399,10 @@ fun TelaAlunoFicha(
     var treinos by remember { mutableStateOf<List<Treino>>(emptyList()) }
     var situacaoPlano by remember { mutableStateOf<SituacaoPlano?>(null) }
     var treinoExcluindo by remember { mutableStateOf<Treino?>(null) }
+    var endereco by remember { mutableStateOf<Endereco?>(null) }
 
     LaunchedEffect(Unit) {
+        endereco = BancoLocal.listarAlunos().firstOrNull { it.id == alunoId }?.endereco
         try {
             treinos = ordenarPorDia(BancoLocal.treinosDoAluno(alunoId))
         } catch (e: Exception) {
@@ -432,6 +437,13 @@ fun TelaAlunoFicha(
                 " Confirme o pagamento na tela financeira antes de montar um treino novo pra esse aluno."
             } else ""
             CardAviso(it.mensagem + complemento, it.cor)
+        }
+
+        endereco?.let {
+            CardSimples {
+                Text("Endereço", style = MaterialTheme.typography.titleLarge)
+                TextoEndereco(it)
+            }
         }
 
         Button(onClick = montarTreino, enabled = !planoBloqueado, modifier = Modifier.fillMaxWidth()) {
