@@ -2,6 +2,7 @@ package com.example.app_academia_ulbra
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,9 +67,20 @@ import com.example.app_academia_ulbra.dados.ordenarPorDia
 import com.example.app_academia_ulbra.ui.theme.Espaco
 import com.example.app_academia_ulbra.ui.theme.VerdeSucesso
 import com.example.app_academia_ulbra.ui.theme.VermelhoPerigo
+import com.example.app_academia_ulbra.dados.Endereco
+import com.example.app_academia_ulbra.dados.buscarEndereco
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 // ---------- Cadastrar aluno ----------
+
+sealed interface EstadoCep {
+    data object Vazio : EstadoCep
+    data object Carregando : EstadoCep
+    data class Pronto(val endereco: Endereco) : EstadoCep
+    data class Erro(val mensagem: String) : EstadoCep
+}
 
 @Composable
 fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
@@ -86,6 +98,23 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
     var finalidade by rememberSaveable { mutableStateOf("") }
     var tentouSalvar by rememberSaveable { mutableStateOf(false) }
     var salvando by remember { mutableStateOf(false) }
+    var cep by rememberSaveable { mutableStateOf("") }
+    var estadoCep by remember { mutableStateOf<EstadoCep>(EstadoCep.Vazio) }
+
+    fun buscarCep() {
+        estadoCep = EstadoCep.Carregando
+        escopo.launch {
+            estadoCep = try {
+                EstadoCep.Pronto(buscarEndereco(cep))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                EstadoCep.Erro("Sem conexão com a internet")
+            } catch (e: Exception) {
+                EstadoCep.Erro("CEP não encontrado")
+            }
+        }
+    }
 
     // mesmas validações do formulário do site
     fun obrigatorio(valor: String) = if (tentouSalvar && valor.isBlank()) "Campo obrigatório" else null
@@ -151,6 +180,28 @@ fun TelaAlunoCadastro(aoSalvar: () -> Unit) {
         CampoTexto(email, { email = it }, "E-mail", "aluno@email.com", KeyboardType.Email, erro = obrigatorio(email))
         CampoTexto(senha, { senha = it }, "Senha", "Senha inicial do aluno", KeyboardType.Password, senha = true, erro = erroSenha)
         CampoTexto(finalidade, { finalidade = it }, "Finalidade", "Ex: Hipertrofia, Emagrecimento", erro = obrigatorio(finalidade))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) {
+                CampoTexto(cep, { cep = it.filter(Char::isDigit).take(8) }, "CEP", "00000000", KeyboardType.Number)
+            }
+            Spacer(Modifier.width(Espaco.pequeno))
+            OutlinedButton(
+                onClick = { buscarCep() },
+                enabled = cep.length == 8 && estadoCep != EstadoCep.Carregando
+            ) {
+                Text("Buscar")
+            }
+        }
+        when (val estado = estadoCep) {
+            EstadoCep.Vazio -> {}
+            EstadoCep.Carregando -> Carregando()
+            is EstadoCep.Pronto -> with(estado.endereco) {
+                Text("$logradouro, $bairro", fontWeight = FontWeight.Bold)
+                TextoSecundario("$localidade - $uf, $cep")
+            }
+            is EstadoCep.Erro -> Text(estado.mensagem, color = VermelhoPerigo)
+        }
 
         Button(
             onClick = { cadastrar() },
