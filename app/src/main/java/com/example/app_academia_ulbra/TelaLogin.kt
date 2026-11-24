@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import com.example.app_academia_ulbra.dados.Servidor
+import com.example.app_academia_ulbra.dados.BancoLocal
 import com.example.app_academia_ulbra.dados.LoginRequest
 import com.example.app_academia_ulbra.dados.Sessao
 import com.example.app_academia_ulbra.dados.mensagemDeErro
@@ -37,7 +37,7 @@ fun TelaLogin(aoEntrar: () -> Unit) {
         carregando = true
         escopo.launch {
             try {
-                val resposta = Servidor.login(LoginRequest(email.trim(), senha))
+                val resposta = BancoLocal.login(LoginRequest(email.trim(), senha))
                 Sessao.entrar(resposta)
                 aoEntrar()
             } catch (e: Exception) {

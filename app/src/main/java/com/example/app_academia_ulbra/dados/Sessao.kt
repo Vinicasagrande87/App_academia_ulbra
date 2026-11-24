@@ -28,8 +28,6 @@ object Sessao {
         id = prefs.getInt("id", 0)
         nome = prefs.getString("nome", "") ?: ""
         tipo = prefs.getString("tipo", "") ?: ""
-        // login feito quando o app usava só os dados do celular: não vale no servidor
-        if (token == "acesso-local") sair()
     }
 
     fun entrar(resposta: LoginResposta) {
